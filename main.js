@@ -42,10 +42,10 @@ var __webpack_exports__ = {};
 ;// CONCATENATED MODULE: ./src/assets/img/logo-transparent.png
 /* harmony default export */ const logo_transparent = (__webpack_require__.p + "logo-transparent.png");
 ;// CONCATENATED MODULE: ./src/modules/api.js
-const getData = async (movie) => {
+const getData = async (movie, page) => {
   const key = 'e7db26be';
 
-  const data = await fetch(`https://www.omdbapi.com/?s=${movie}&apikey=${key}`);
+  const data = await fetch(`https://www.omdbapi.com/?s=${movie}&apikey=${key}&page=${page}`);
   const moviesInfo = await data.json();
   return moviesInfo.Search;
 };
@@ -117,17 +117,64 @@ const setComment = async (movieID, comment, name) => {
 const movieList = document.querySelector('.movie-list');
 const movieDetails = document.querySelector('.movie-details');
 const page = document.documentElement;
-const searchMovie = document.querySelector('.search-input');
+const searchMovie = document.querySelectorAll('.search-input');
+const menuButton = document.querySelector('.mobile_menu_btn');
+const mobileMenu = document.querySelector('.mobile_menu');
+const remButton = document.querySelector('.menu_close');
+const prev = document.querySelector('.prev');
+const next = document.querySelector('.next');
+let movieName = 'marvel';
+let prevNum = 2;
+let nextNum = 2;
+
+// Mobile Menu
+// transition styles
+mobileMenu.style.right = '-800px';
+mobileMenu.style.transition = 'right 800ms';
+
+// listen for a click on the menu button and X button
+menuButton.addEventListener('click', () => {
+  mobileMenu.style.display = 'block';
+  setTimeout(() => {
+    mobileMenu.style.right = '0px';
+  }, 1);
+});
+
+remButton.addEventListener('click', () => {
+  mobileMenu.style.right = '-800px';
+  setTimeout(() => {
+    mobileMenu.style.display = 'none';
+  }, 900);
+  menuButton.style.display = 'block';
+});
 
 // Function to count number of element on the page
-const countItems = (arr) => {
-  let count = 0;
-  arr.forEach(() => {
-    count += 1;
+const countItems = (items) => {
+  let movieCount = 0;
+  let serieCount = 0;
+  let gameCount = 0;
+  items.forEach((item) => {
+    if (item.Type === 'movie') {
+      movieCount += 1;
+    } else if (item.Type === 'series') {
+      serieCount += 1;
+    } else if (item.Type === 'game') {
+      gameCount += 1;
+    }
   });
-  const itemCount = document.querySelector('.item-count');
-  itemCount.innerHTML = count;
-  return count;
+  const moviesCount = document.querySelectorAll('.movies-count');
+  const seriesCount = document.querySelectorAll('.series-count');
+  const gamesCount = document.querySelectorAll('.games-count');
+  moviesCount.forEach((counter) => {
+    counter.innerHTML = movieCount;
+  });
+  seriesCount.forEach((counter) => {
+    counter.innerHTML = serieCount;
+  });
+  gamesCount.forEach((counter) => {
+    counter.innerHTML = gameCount;
+  });
+  return { movieCount, serieCount, gameCount };
 };
 
 // Function to get & display lakes on the home page
@@ -146,42 +193,54 @@ const likeCount = (id, index, Likes) => {
   });
 };
 
+const commentsCount = (comments) => {
+  let count = 0;
+  if (comments.length > 0) {
+    comments.forEach(() => {
+      count += 1;
+    });
+  } else {
+    count = 0;
+  }
+  return count;
+};
+
 const showComments = async (id) => {
   getComments(id).then((comments) => {
-    let commentsCount = 0;
+    const count = commentsCount(comments);
+    document.getElementById('comments-count').innerHTML = '';
     if (comments.length > 0) {
       comments.forEach((comment) => {
-        commentsCount += 1;
         const li = document.createElement('li');
         li.className = 'comment';
         li.innerHTML = `${comment.creation_date} ${comment.username}: ${comment.comment}`;
-
+        document.getElementById('comments-count').innerHTML = count;
         document.querySelector('.comments-list').appendChild(li);
       });
     } else {
       document.querySelector('.comments-list').innerHTML = 'No comments yet!';
       document.querySelector('.comments-list').className = 'empty';
+      document.getElementById('comments-count').innerHTML = '0';
     }
-    document.getElementById('comments-count').innerHTML = commentsCount;
   });
 };
-// setLikes();
-const displayMovies = (title) => {
-  getData(title)
+
+const displayMovies = (title, page) => {
+  getData(title, page)
     .then((res) => {
       movieList.innerHTML = '';
       res.forEach((movie) => {
         movieList.innerHTML += `<article id="${movie.imdbID}" class="movie">
-                                <img class="movie-poster" src="${movie.Poster}"/>
-                                <div class="l-c-buttons">
-                                    <i class="like-btn">&#x2764; <span class="likes-data"></span></i>
-                                    <button class="comment-btn">Comments</button>
-                                </div>
-                                <p class="movie-title" title="${movie.Title}">${movie.Title}</p>
+                                <div class="poster-div"><img class="movie-poster" src="${movie.Poster}"/></div>
                                 <ul class="type-year">
-                                    <li class="movie-type">${movie.Type}</li>
-                                    <li class="movie-year">${movie.Year}</li>
+                                  <li class="movie-type">${movie.Type}</li>
+                                  <li class="movie-year">${movie.Year}</li>
                                 </ul>
+                                <div class="l-c-buttons">
+                                  <button type="button" class="like-btn btn">&#x2764; <span class="likes-data"></span></button>
+                                  <button type="button" class="comment-btn btn">Comments</button>
+                                </div>
+                                <h3 class="movie-title">${movie.Title}</h3>
                             </article>`;
       });
       return res;
@@ -233,7 +292,7 @@ const showComment = (btn) => {
             </ul>
             <p class="m-plot">${data.Plot}</p>
             <section class="movie-comments">
-              <h3 class="comments-subtitle">Comments(<span id="comments-count"></span>)</h3>
+              <h3 class="comments-subtitle">Comments(<span id="comments-count">0</span>)</h3>
               <ul class="comments-list list"></ul>
               <h3 class="comments-subtitle">Add a comment</h3>
               <form action="#" id="add-comment-form" class="${movieId}">
@@ -261,20 +320,60 @@ document.addEventListener('DOMContentLoaded', () => {
   displayMovies('marvel');
 });
 
-searchMovie.addEventListener('input', () => {
-  if (searchMovie.value === '') {
-    displayMovies('marvel');
-  } else {
-    displayMovies(searchMovie.value);
+searchMovie.forEach((searchInput) => {
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      movieName = searchInput.value;
+      if (searchInput.value === '') {
+        displayMovies('marvel');
+      } else {
+        displayMovies(movieName);
+      }
+      if (window.innerWidth > 600) {
+        menuButton.style.display = 'none';
+      } else {
+        mobileMenu.style.right = '-800px';
+        setTimeout(() => {
+          mobileMenu.style.display = 'none';
+        }, 900);
+        menuButton.style.display = 'block';
+      }
+      mobileMenu.style.right = '-800px';
+      setTimeout(() => {
+        mobileMenu.style.display = 'none';
+      }, 900);
+    }
+  });
+});
+
+prev.addEventListener('click', () => {
+  displayMovies(movieName, prevNum);
+  prevNum -= 1;
+  nextNum -= 1;
+  if (prevNum <= 1) {
+    prev.setAttribute('disabled', '');
+  }
+});
+
+next.addEventListener('click', () => {
+  displayMovies(movieName, nextNum);
+  prevNum += 1;
+  nextNum += 1;
+  if (prevNum > 1) {
+    prev.removeAttribute('disabled', '');
   }
 });
 
 document.addEventListener('click', (e) => {
   if (e.target && e.target.classList.contains('comment-btn')) {
+    prev.style.display = 'none';
+    next.style.display = 'none';
     showComment(e.target);
   }
 
   if (e.target && (e.target.classList.contains('pop-close-btn') || e.target.classList.contains('pop-close'))) {
+    prev.style.display = 'block';
+    next.style.display = 'block';
     page.classList.remove('comment-open');
   }
 });
@@ -285,6 +384,14 @@ document.addEventListener('submit', (e) => {
     const identifier = e.target.className;
     setComment(identifier, document.querySelector('.comment-input').value, document.querySelector('.name-input').value);
     e.target.reset();
+  }
+});
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 600) {
+    menuButton.style.display = 'none';
+  } else {
+    menuButton.style.display = 'block';
   }
 });
 
